@@ -1,0 +1,21 @@
+# .NET build outputs
+bin/
+obj/
+*.user
+*.suo
+*.vs/
+.vs/
+publish/
+*.nupkg
+*.snupkg
+
+# ASP.NET
+appsettings.json
+appsettings.*.json
+
+# Claude Code
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
