@@ -119,9 +119,21 @@ internal sealed class MongoReader(string mongoConnStr, string checkoutDatabase, 
                     paidDate = ev["createdAt"].ToUniversalTime();
             }
 
-            var value       = GetDecimal(doc, "value");
-            var totalValue  = GetDecimal(doc, "totalValue");
-            var couponValue = GetDecimal(doc, "couponValue");
+            decimal value, totalValue, couponValue;
+            try
+            {
+                value       = GetDecimal(doc, "value");
+                totalValue  = doc.Contains("totalValue") ? GetDecimal(doc, "totalValue") : value;
+                couponValue = doc.Contains("couponValue") ? GetDecimal(doc, "couponValue") : 0m;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"  [ERRO] _id={oid} product={rawProduct} createdAt={createdAt:O}");
+                Console.WriteLine($"         campos: value={doc.Contains("value")} totalValue={doc.Contains("totalValue")} couponValue={doc.Contains("couponValue")}");
+                Console.WriteLine($"         doc: {doc.ToJson()}");
+                Console.WriteLine($"         ex: {ex.Message}");
+                throw;
+            }
 
             string? paymentType = null;
             if (doc.Contains("payment") && !doc["payment"].IsBsonNull)

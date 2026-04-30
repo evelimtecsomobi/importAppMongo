@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -187,7 +188,7 @@ internal sealed class ComTransmtWriter(string pgConnStr, string blameUser, int c
 
                 ctdId = (int)(await cmdDt.ExecuteScalarAsync(ct)
                     ?? throw new InvalidOperationException(
-                        $"Falha ao inserir com_trandt (COUPON) para externalid={s.ExternalId}"));
+                        $"Falha ao inserir com_trandt (COUPON) para externalid={s.ExternalId} objectid={s.RawObjectId}"));
             }
             else
             {
@@ -203,7 +204,7 @@ internal sealed class ComTransmtWriter(string pgConnStr, string blameUser, int c
 
                 ctdId = (int)(await cmdDt.ExecuteScalarAsync(ct)
                     ?? throw new InvalidOperationException(
-                        $"Falha ao inserir com_trandt (ctd_id null) para externalid={s.ExternalId}"));
+                        $"Falha ao inserir com_trandt (ctd_id null) para externalid={s.ExternalId} objectid={s.RawObjectId}"));
 
                 // com_trandt — cupom adicional (quando couponValue > 0)
                 if (s.CouponValue > 0)
@@ -236,13 +237,26 @@ internal sealed class ComTransmtWriter(string pgConnStr, string blameUser, int c
                 cmdPm.Parameters["dtpayment"].Value      = s.ConfirmDate;
                 cmdPm.Parameters["value"].Value          = s.TotalValue;
                 cmdPm.Parameters["acquirer_name"].Value  = (object?)s.AcquirerName          ?? DBNull.Value;
-                cmdPm.Parameters["pix_txid"].Value       = (object?)s.AcquirerTransactionId ?? DBNull.Value;
+                cmdPm.Parameters["pix_txid"].Value       = s.AcquirerTransactionId is not null
+                    ? Regex.Replace(s.AcquirerTransactionId, @"[^a-zA-Z0-9]", "")
+                    : DBNull.Value;
                 cmdPm.Parameters["pix_endtoendid"].Value = (object?)s.AcquirerPaymentId     ?? DBNull.Value;
                 cmdPm.Parameters["nsu_acquirer"].Value   = 1L;
                 cmdPm.Parameters["aut_acquirer"].Value   = (object?)s.AcquirerNsu            ?? DBNull.Value;
                 cmdPm.Parameters["brand"].Value          = (object?)s.Brand                  ?? DBNull.Value;
 
-                await cmdPm.ExecuteNonQueryAsync(ct);
+                try
+                {
+                    await cmdPm.ExecuteNonQueryAsync(ct);
+                }
+                catch (Exception ex)
+                {
+                    var paramDump = string.Join(", ", cmdPm.Parameters.Cast<NpgsqlParameter>()
+                        .Select(p => $"{p.ParameterName}={p.Value}"));
+                    Console.Error.WriteLine($"[cmdPm ERROR] externalid={s.ExternalId} objectid={s.RawObjectId} | {paramDump}");
+                    Console.Error.WriteLine($"[cmdPm ERROR] exception: {ex.Message}");
+                    throw;
+                }
             }
         }
     }
