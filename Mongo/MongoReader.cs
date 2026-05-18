@@ -64,7 +64,9 @@ internal sealed class MongoReader(string mongoConnStr, string checkoutDatabase, 
             .Where(o => (o["product"].AsString == "TICKET" || o["product"].AsString == "TICKET_COUPON")
                      && o.Contains("items") && o["items"].IsBsonArray)
             .SelectMany(o => o["items"].AsBsonArray
-                .Select(i => ObjectId.Parse(i.AsString)))
+                .Select(i => i.AsString)
+                .Where(s => ObjectId.TryParse(s, out _))
+                .Select(s => ObjectId.Parse(s)))
             .Distinct()
             .ToList();
 
