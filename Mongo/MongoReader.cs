@@ -7,7 +7,7 @@ using MongoDB.Driver;
 /// </summary>
 internal sealed class MongoReader(string mongoConnStr, string checkoutDatabase, string mobilityDatabase, int serverSelectionTimeoutSeconds = 30)
 {
-    private static readonly string[] CompletedStates = ["COMPLETED", "ACCEPTED"];
+    private static readonly string[] CompletedStates = ["COMPLETED"]; //removido o  "ACCEPTED" cf. orientação do Carlos Barreto
     public async Task<List<SrcRecord>> ReadAsync(DateTime startTs, DateTime endTs, CancellationToken ct)
     {
         var settings = MongoClientSettings.FromConnectionString(mongoConnStr);
